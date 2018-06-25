@@ -1,0 +1,150 @@
+<?php 
+    $title = 'Books';
+    $this->headTitle($title);
+
+?>
+
+ <h1><?php echo $this->escapeHtml($title); ?></h1>
+ <p>
+     
+ </p>
+
+ <table class="table">
+ <tr>
+     <th>Title</th>
+     <th>Author</th>
+     <th>Total Number of Copies</th>
+     <th>Issued Number Of Copies</th>
+     <th>Available Number Of Copies</th>
+     <th>Actions</th>
+ </tr>
+ <?php 
+    foreach ($books as $book) :      
+?>
+ <tr>
+     <td><?php echo $this->escapeHtml($book->title);?></td>
+     <td><?php echo $this->escapeHtml($book->author);?></td>
+     <td><?php echo $this->escapeHtml($book->numberOfCopies);?></td>
+     <td><?php echo $this->escapeHtml($book->issuedCopies);?></td>
+     <td><?php echo $this->escapeHtml($book->numberOfCopies - $book->issuedCopies );?></td>
+     <td>
+        <?php
+            if($book->issuedCopies >= $book->numberOfCopies){
+                echo  '<span>Not Available</span>';
+        ?>
+            <?php } else {?>
+         <a class="btn btn-primary issueBtn" id="<?='issueBtn'.$book->bookId?>"  attr-bookId = '<?=$book->bookId?>'>
+            <i class="fa fa-spinner fa-spin hide" id='<?='issueSpin'.$book->bookId?>'></i>
+          Issue 
+         </a>
+            <?php } ?>
+        <?php if ($book->issuedCopies == 0) { 
+            echo  '<span>No Return</span>';
+         }else{ ?>
+         <a class="btn btn-primary returnBtn" id="<?='returnBtn'.$book->bookId?>" attr-bookId = '<?=$book->bookId?>'>
+              <i class="fa fa-spinner fa-spin hide"  id='<?='returnSpin'.$book->bookId?>'></i>
+            Return</a>
+        <?php } ?>
+     </td>
+ </tr>
+ <?php endforeach; ?>
+ </table>
+ 
+ <script>
+     
+    /**
+     * Holds JavaScript to handle  click event and ajax call to issue 
+     * and return book
+     *
+     * 
+     */
+        $(document).on('click',".issueBtn",function(){
+            if(!(isNaN(parseInt($(this).attr('attr-bookId'))))){
+                var issued =$(this).parent().siblings()[3];
+                var availableBook = $(this).parent().siblings()[4];
+                var issue  = $(this);
+                var returnbook =$(this).siblings()[0];
+                var bookId =parseInt($(this).attr('attr-bookId'));
+                $(issue).addClass('disabled');
+                $("#issueSpin".bookId).removeClass('hide');
+                $.ajax({
+                    url: "book/index/issue_book",
+                    method:'post',
+                    dataType: 'Json',
+                    data: {bookId:bookId},
+                    success: function(result){
+                        if(parseInt(result.statusCode) ==200){
+                            if(parseInt(result.reasonPhrase[1].available)=== 0){
+                               $(issue).replaceWith('<span>Not Available</span>');
+                            }else{
+                                if(result.reasonPhrase[1].issued >= 0){
+                                    if($('#returnBtn'+bookId).length == 0){
+                                        $(returnbook).replaceWith("<a class='btn btn-primary returnBtn' attr-bookId = '"+bookId+"'>Return</a>");   
+                                    }
+                                }
+                            }
+                            $(issued).html(result.reasonPhrase[1].issued);
+                            $(availableBook).html(result.reasonPhrase[1].available);
+                            alert(result.reasonPhrase[0].toString());    
+                            $(issue).removeClass('disabled');
+                            $("#issueSpin".bookId).addClass('hide');
+                        }else{
+                            alert("Some Error Occured Please  Reload Page");  
+                            location.reload();
+                        }
+                    },error: function (errorResponse) {
+                        alert(errorResponse.responseJSON.reasonPhrase[0]);
+                        location.reload();
+                    }
+                });
+            }else{
+               
+           }
+        }); 
+         
+        $(document).on('click',".returnBtn",function(){
+            if(!(isNaN(parseInt($(this).attr('attr-bookId'))))){
+                var issuedBook =$(this).parent().siblings()[3];
+                var availableBook= $(this).parent().siblings()[4];
+                var returnbook  = $(this);
+                var issueBook =$(this).siblings()[0];
+                var bookId =parseInt($(this).attr('attr-bookId'));
+                $(returnbook).addClass('disabled');
+                $("#returnSpin".bookId).removeClass('hide');
+                $.ajax({
+                    url: "book/index/return_book",
+                    method:'post',
+                    dataType: 'Json',
+                    data: {bookId:bookId},
+                    success: function(result){
+                        if(parseInt(result.statusCode) ==200){
+                            if(parseInt(result.reasonPhrase[1].issued) <= 0){
+                                $(returnbook).replaceWith('<span> No Return </span>');
+                            }else{
+                                if(parseInt(result.reasonPhrase[1].available) > 0){
+                                    if($('#issueBtn'+bookId).length === 0){
+                                      $(issueBook).replaceWith("<a class='btn btn-primary issueBtn' attr-bookId = '"+bookId+"'>Issue</a>");   
+                                    }
+                                }
+                            }
+                            $(issuedBook).html(result.reasonPhrase[1].issued);
+                            $(availableBook).html(result.reasonPhrase[1].available);
+                            $(returnbook).removeClass('disabled');
+                            $("#returnSpin".bookId).addClass('hide');
+                            alert(result.reasonPhrase[0].toString());
+                        }else{
+                            alert("Some Error Occured Please  Reload Page");  
+                            location.reload(); 
+                        }
+                    },error: function (errorResponse) {
+                       alert(errorResponse.responseJSON.reasonPhrase[0]);  
+                       location.reload();                           
+                    }
+                });
+            }else{
+               
+            }
+        });     
+ </script>
+ 
+ 
